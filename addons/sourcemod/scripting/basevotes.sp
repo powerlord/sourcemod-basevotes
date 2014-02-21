@@ -383,15 +383,18 @@ public Handler_VoteCallback(Handle:menu, MenuAction:action, param1, param2)
 							strcopy(g_voteArg, sizeof(g_voteArg), "Votebanned");
 						}
 						
-						PrintToChatAll("[SM] %t", "Banned player", g_voteInfo[VOTE_NAME], 30);
-						LogAction(-1, g_voteClient[VOTE_CLIENTID], "Vote ban successful, banned \"%L\" (minutes \"30\") (reason \"%s\")", g_voteClient[VOTE_CLIENTID], g_voteArg);
+						if (GetClientOfUserId(g_voteClient[VOTE_USERID]) > 0)
+						{
+							PrintToChatAll("[SM] %t", "Banned player", g_voteInfo[VOTE_NAME], 30);
+							LogAction(-1, g_voteClient[VOTE_CLIENTID], "Vote ban successful, banned \"%L\" (minutes \"30\") (reason \"%s\")", g_voteClient[VOTE_CLIENTID], g_voteArg);
 
-						BanClient(g_voteClient[VOTE_CLIENTID],
-								  30,
-								  BANFLAG_AUTO,
-								  g_voteArg,
-								  "Banned by vote",
-								  "sm_voteban");
+							BanClient(g_voteClient[VOTE_CLIENTID],
+									  30,
+									  BANFLAG_AUTO,
+									  g_voteArg,
+									  "Banned by vote",
+									  "sm_voteban");
+						}
 					}
 				}
 			}
