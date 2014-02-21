@@ -49,7 +49,7 @@ public Plugin:myinfo =
 #define VOTE_NO "###no###"
 #define VOTE_YES "###yes###"
 
-new Handle:g_hVoteMenu = INVALID_HANDLE;
+//new Handle:g_hVoteMenu = INVALID_HANDLE;
 
 new Handle:g_Cvar_Limits[3] = {INVALID_HANDLE, ...};
 //new Handle:g_Cvar_VoteSay = INVALID_HANDLE;
@@ -125,6 +125,15 @@ public OnPluginStart()
 	decl String:mapListPath[PLATFORM_MAX_PATH];
 	BuildPath(Path_SM, mapListPath, sizeof(mapListPath), "configs/adminmenu_maplist.ini");
 	SetMapListCompatBind("sm_votemap menu", mapListPath);
+}
+
+public OnLibraryAdded(const String:name[])
+{
+	new Handle:topmenu;
+	if (strcmp(name, "adminmenu") && ((topmenu = GetAdminTopMenu()) != INVALID_HANDLE))
+	{
+		OnAdminMenuReady(topmenu);
+	}
 }
 
 public OnConfigsExecuted()
@@ -217,153 +226,173 @@ public Action:Command_Vote(client, args)
 	
 	g_voteType = voteType:question;
 	
-	g_hVoteMenu = CreateMenu(Handler_VoteCallback, MenuAction:MENU_ACTIONS_ALL);
-	SetMenuTitle(g_hVoteMenu, "%s?", g_voteArg);
+	new Handle:voteMenu = CreateMenu(Handler_VoteCallback, MenuAction:MENU_ACTIONS_ALL);
+	SetMenuTitle(voteMenu, "%s?", g_voteArg);
 	
 	if (answerCount < 2)
 	{
-		AddMenuItem(g_hVoteMenu, VOTE_YES, "Yes");
-		AddMenuItem(g_hVoteMenu, VOTE_NO, "No");
+		AddMenuItem(voteMenu, VOTE_YES, "Yes");
+		AddMenuItem(voteMenu, VOTE_NO, "No");
 	}
 	else
 	{
 		for (new i = 0; i < answerCount; i++)
 		{
-			AddMenuItem(g_hVoteMenu, answers[i], answers[i]);
+			AddMenuItem(voteMenu, answers[i], answers[i]);
 		}	
 	}
 	
-	SetMenuExitButton(g_hVoteMenu, false);
-	VoteMenuToAll(g_hVoteMenu, 20);		
+	SetMenuExitButton(voteMenu, false);
+	VoteMenuToAll(voteMenu, 20);		
 	
 	return Plugin_Handled;	
 }
 
 public Handler_VoteCallback(Handle:menu, MenuAction:action, param1, param2)
 {
-	if (action == MenuAction_End)
+	switch (action)
 	{
-		VoteMenuClose();
-	}
-	else if (action == MenuAction_Display)
-	{
-	 	if (g_voteType != voteType:question)
-	 	{
-			decl String:title[64];
-			GetMenuTitle(menu, title, sizeof(title));
-			
-	 		decl String:buffer[255];
-			Format(buffer, sizeof(buffer), "%T", title, param1, g_voteInfo[VOTE_NAME]);
-
-			new Handle:panel = Handle:param2;
-			SetPanelTitle(panel, buffer);
-		}
-	}
-	else if (action == MenuAction_DisplayItem)
-	{
-		decl String:display[64];
-		GetMenuItem(menu, param2, "", 0, _, display, sizeof(display));
-	 
-	 	if (strcmp(display, "No") == 0 || strcmp(display, "Yes") == 0)
-	 	{
-			decl String:buffer[255];
-			Format(buffer, sizeof(buffer), "%T", display, param1);
-
-			return RedrawMenuItem(buffer);
-		}
-	}
-	/* else if (action == MenuAction_Select)
-	{
-		VoteSelect(menu, param1, param2);
-	}*/
-	else if (action == MenuAction_VoteCancel && param1 == VoteCancel_NoVotes)
-	{
-		PrintToChatAll("[SM] %t", "No Votes Cast");
-	}	
-	else if (action == MenuAction_VoteEnd)
-	{
-		decl String:item[64], String:display[64];
-		new Float:percent, Float:limit, votes, totalVotes;
-
-		GetMenuVoteInfo(param2, votes, totalVotes);
-		GetMenuItem(menu, param1, item, sizeof(item), _, display, sizeof(display));
-		
-		if (strcmp(item, VOTE_NO) == 0 && param1 == 1)
+		case MenuAction_End:
 		{
-			votes = totalVotes - votes; // Reverse the votes to be in relation to the Yes option.
+			//VoteMenuClose();
+			CloseHandle(menu);
 		}
 		
-		percent = GetVotePercent(votes, totalVotes);
-		
-		if (g_voteType != voteType:question)
+		case MenuAction_Display:
 		{
-			limit = GetConVarFloat(g_Cvar_Limits[g_voteType]);
-		}
-		
-		/* :TODO: g_voteClient[userid] needs to be checked */
-
-		// A multi-argument vote is "always successful", but have to check if its a Yes/No vote.
-		if ((strcmp(item, VOTE_YES) == 0 && FloatCompare(percent,limit) < 0 && param1 == 0) || (strcmp(item, VOTE_NO) == 0 && param1 == 1))
-		{
-			/* :TODO: g_voteClient[userid] should be used here and set to -1 if not applicable.
-			 */
-			LogAction(-1, -1, "Vote failed.");
-			PrintToChatAll("[SM] %t", "Vote Failed", RoundToNearest(100.0*limit), RoundToNearest(100.0*percent), totalVotes);
-		}
-		else
-		{
-			PrintToChatAll("[SM] %t", "Vote Successful", RoundToNearest(100.0*percent), totalVotes);
-			
-			switch (g_voteType)
+			if (g_voteType != voteType:question)
 			{
-				case (voteType:question):
-				{
-					if (strcmp(item, VOTE_NO) == 0 || strcmp(item, VOTE_YES) == 0)
-					{
-						strcopy(item, sizeof(item), display);
-					}
-					
-					PrintToChatAll("[SM] %t", "Vote End", g_voteArg, item);
-				}
+				decl String:title[64];
+				GetMenuTitle(menu, title, sizeof(title));
 				
-				case (voteType:map):
-				{
-					LogAction(-1, -1, "Changing map to %s due to vote.", item);
-					PrintToChatAll("[SM] %t", "Changing map", item);
-					new Handle:dp;
-					CreateDataTimer(5.0, Timer_ChangeMap, dp);
-					WritePackString(dp, item);		
-				}
-					
-				case (voteType:kick):
-				{
-					if (g_voteArg[0] == '\0')
-					{
-						strcopy(g_voteArg, sizeof(g_voteArg), "Votekicked");
-					}
-					
-					PrintToChatAll("[SM] %t", "Kicked target", "_s", g_voteInfo[VOTE_NAME]);					
-					LogAction(-1, g_voteClient[VOTE_CLIENTID], "Vote kick successful, kicked \"%L\" (reason \"%s\")", g_voteClient[VOTE_CLIENTID], g_voteArg);
-					
-					ServerCommand("kickid %d \"%s\"", g_voteClient[VOTE_USERID], g_voteArg);					
-				}
-					
-				case (voteType:ban):
-				{
-					if (g_voteArg[0] == '\0')
-					{
-						strcopy(g_voteArg, sizeof(g_voteArg), "Votebanned");
-					}
-					
-					PrintToChatAll("[SM] %t", "Banned player", g_voteInfo[VOTE_NAME], 30);
-					LogAction(-1, g_voteClient[VOTE_CLIENTID], "Vote ban successful, banned \"%L\" (minutes \"30\") (reason \"%s\")", g_voteClient[VOTE_CLIENTID], g_voteArg);
+				decl String:buffer[255];
+				Format(buffer, sizeof(buffer), "%T", title, param1, g_voteInfo[VOTE_NAME]);
 
-					BanClient(g_voteClient[VOTE_CLIENTID],
-							  30,
-							  BANFLAG_AUTO,
-							  g_voteArg,
-							  "Banned by vote",
-							  "sm_voteban");
+				new Handle:panel = Handle:param2;
+				SetPanelTitle(panel, buffer);
+			}
+		}
+		
+		case MenuAction_DisplayItem:
+		{
+			decl String:display[64];
+			GetMenuItem(menu, param2, "", 0, _, display, sizeof(display));
+		 
+			if (strcmp(display, "No") == 0 || strcmp(display, "Yes") == 0)
+			{
+				decl String:buffer[255];
+				Format(buffer, sizeof(buffer), "%T", display, param1);
+
+				return RedrawMenuItem(buffer);
+			}
+		}
+		
+		case MenuAction_VoteCancel:
+		{
+			if (param1 == VoteCancel_NoVotes)
+			{
+				PrintToChatAll("[SM] %t", "No Votes Cast");
+			}
+		}
+		
+		case MenuAction_VoteEnd:
+		{
+			decl String:item[64], String:display[64];
+			new Float:percent, Float:limit, votes, totalVotes;
+
+			GetMenuVoteInfo(param2, votes, totalVotes);
+			GetMenuItem(menu, param1, item, sizeof(item), _, display, sizeof(display));
+			
+			if (strcmp(item, VOTE_NO) == 0 && param1 == 1)
+			{
+				votes = totalVotes - votes; // Reverse the votes to be in relation to the Yes option.
+			}
+			
+			percent = GetVotePercent(votes, totalVotes);
+			
+			if (g_voteType != voteType:question)
+			{
+				limit = GetConVarFloat(g_Cvar_Limits[g_voteType]);
+			}
+			
+			/* :TODO: g_voteClient[userid] needs to be checked */
+
+			// A multi-argument vote is "always successful", but have to check if its a Yes/No vote.
+			if ((strcmp(item, VOTE_YES) == 0 && FloatCompare(percent,limit) < 0 && param1 == 0) || (strcmp(item, VOTE_NO) == 0 && param1 == 1))
+			{
+				/* :TODO: g_voteClient[userid] should be used here and set to -1 if not applicable.
+				 */
+				LogAction(-1, -1, "Vote failed.");
+				PrintToChatAll("[SM] %t", "Vote Failed", RoundToNearest(100.0*limit), RoundToNearest(100.0*percent), totalVotes);
+			}
+			else
+			{
+				PrintToChatAll("[SM] %t", "Vote Successful", RoundToNearest(100.0*percent), totalVotes);
+				
+				switch (g_voteType)
+				{
+					case (voteType:question):
+					{
+						if (strcmp(item, VOTE_NO) == 0 || strcmp(item, VOTE_YES) == 0)
+						{
+							for (new i = 0; i <= MaxClients; i++)
+							{
+								if (IsClientInGame(i))
+								{
+									Format(item, sizeof(item), "%T", display, i);
+									PrintToChat(i, "[SM] %t", "Vote End", g_voteArg, item);
+								}
+							}
+						}
+						else
+						{
+							PrintToChatAll("[SM] %t", "Vote End", g_voteArg, item);
+						}
+					}
+					
+					case (voteType:map):
+					{
+						LogAction(-1, -1, "Changing map to %s due to vote.", item);
+						PrintToChatAll("[SM] %t", "Changing map", item);
+						new Handle:dp;
+						CreateDataTimer(5.0, Timer_ChangeMap, dp);
+						WritePackString(dp, item);		
+					}
+						
+					case (voteType:kick):
+					{
+						if (g_voteArg[0] == '\0')
+						{
+							strcopy(g_voteArg, sizeof(g_voteArg), "Votekicked");
+						}
+						
+						if (GetClientOfUserId(g_voteClient[VOTE_USERID]) > 0)
+						{
+							PrintToChatAll("[SM] %t", "Kicked target", "_s", g_voteInfo[VOTE_NAME]);					
+							LogAction(-1, g_voteClient[VOTE_CLIENTID], "Vote kick successful, kicked \"%L\" (reason \"%s\")", g_voteClient[VOTE_CLIENTID], g_voteArg);
+
+							KickClient(g_voteClient[VOTE_CLIENTID], "%s", g_voteArg);
+						}
+						
+					}
+						
+					case (voteType:ban):
+					{
+						if (g_voteArg[0] == '\0')
+						{
+							strcopy(g_voteArg, sizeof(g_voteArg), "Votebanned");
+						}
+						
+						PrintToChatAll("[SM] %t", "Banned player", g_voteInfo[VOTE_NAME], 30);
+						LogAction(-1, g_voteClient[VOTE_CLIENTID], "Vote ban successful, banned \"%L\" (minutes \"30\") (reason \"%s\")", g_voteClient[VOTE_CLIENTID], g_voteArg);
+
+						BanClient(g_voteClient[VOTE_CLIENTID],
+								  30,
+								  BANFLAG_AUTO,
+								  g_voteArg,
+								  "Banned by vote",
+								  "sm_voteban");
+					}
 				}
 			}
 		}
@@ -385,11 +414,11 @@ VoteSelect(Handle:menu, param1, param2 = 0)
 }
 */
 
-VoteMenuClose()
+/*VoteMenuClose()
 {
 	CloseHandle(g_hVoteMenu);
 	g_hVoteMenu = INVALID_HANDLE;
-}
+}*/
 
 Float:GetVotePercent(votes, totalVotes)
 {

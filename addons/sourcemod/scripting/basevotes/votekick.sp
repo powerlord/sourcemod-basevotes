@@ -44,12 +44,12 @@ DisplayVoteKickMenu(client, target)
 	
 	g_voteType = voteType:kick;
 	
-	g_hVoteMenu = CreateMenu(Handler_VoteCallback, MenuAction:MENU_ACTIONS_ALL);
-	SetMenuTitle(g_hVoteMenu, "Votekick Player");
-	AddMenuItem(g_hVoteMenu, VOTE_YES, "Yes");
-	AddMenuItem(g_hVoteMenu, VOTE_NO, "No");
-	SetMenuExitButton(g_hVoteMenu, false);
-	VoteMenuToAll(g_hVoteMenu, 20);
+	new Handle:voteMenu = CreateMenu(Handler_VoteCallback, MenuAction:MENU_ACTIONS_ALL);
+	SetMenuTitle(voteMenu, "Votekick Player");
+	AddMenuItem(voteMenu, VOTE_YES, "Yes");
+	AddMenuItem(voteMenu, VOTE_NO, "No");
+	SetMenuExitButton(voteMenu, false);
+	VoteMenuToAll(voteMenu, 20);
 
 }
 

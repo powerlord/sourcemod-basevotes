@@ -44,29 +44,29 @@ DisplayVoteMapMenu(client, mapCount, String:maps[5][])
 	
 	g_voteType = voteType:map;
 	
-	g_hVoteMenu = CreateMenu(Handler_VoteCallback, MenuAction:MENU_ACTIONS_ALL);
+	new Handle:voteMenu = CreateMenu(Handler_VoteCallback, MenuAction:MENU_ACTIONS_ALL);
 	
 	if (mapCount == 1)
 	{
 		strcopy(g_voteInfo[VOTE_NAME], sizeof(g_voteInfo[]), maps[0]);
 			
-		SetMenuTitle(g_hVoteMenu, "Change Map To");
-		AddMenuItem(g_hVoteMenu, maps[0], "Yes");
-		AddMenuItem(g_hVoteMenu, VOTE_NO, "No");
+		SetMenuTitle(voteMenu, "Change Map To");
+		AddMenuItem(voteMenu, maps[0], "Yes");
+		AddMenuItem(voteMenu, VOTE_NO, "No");
 	}
 	else
 	{
 		g_voteInfo[VOTE_NAME][0] = '\0';
 		
-		SetMenuTitle(g_hVoteMenu, "Map Vote");
+		SetMenuTitle(voteMenu, "Map Vote");
 		for (new i = 0; i < mapCount; i++)
 		{
-			AddMenuItem(g_hVoteMenu, maps[i], maps[i]);
+			AddMenuItem(voteMenu, maps[i], maps[i]);
 		}	
 	}
 	
-	SetMenuExitButton(g_hVoteMenu, false);
-	VoteMenuToAll(g_hVoteMenu, 20);		
+	SetMenuExitButton(voteMenu, false);
+	VoteMenuToAll(voteMenu, 20);		
 }
 
 ResetMenu()
