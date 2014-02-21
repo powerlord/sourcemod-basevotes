@@ -366,7 +366,7 @@ public Handler_VoteCallback(Handle:menu, MenuAction:action, param1, param2)
 							strcopy(g_voteArg, sizeof(g_voteArg), "Votekicked");
 						}
 						
-						if (GetClientOfUserId(g_voteClient[VOTE_USERID]) > 0)
+						if (GetClientOfUserId(g_voteClient[VOTE_USERID]) > 0 && !IsClientInKickQueue(g_voteClient[VOTE_CLIENTID]))
 						{
 							PrintToChatAll("[SM] %t", "Kicked target", "_s", g_voteInfo[VOTE_NAME]);					
 							LogAction(-1, g_voteClient[VOTE_CLIENTID], "Vote kick successful, kicked \"%L\" (reason \"%s\")", g_voteClient[VOTE_CLIENTID], g_voteArg);
