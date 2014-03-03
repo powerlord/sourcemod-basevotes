@@ -335,9 +335,9 @@ public Handler_VoteCallback(Handle:menu, MenuAction:action, param1, param2)
 					{
 						if (strcmp(item, VOTE_NO) == 0 || strcmp(item, VOTE_YES) == 0)
 						{
-							for (new i = 0; i <= MaxClients; i++)
+							for (new i = 1; i <= MaxClients; i++)
 							{
-								if (IsClientInGame(i))
+								if (IsClientInGame(i) && !IsFakeClient(i))
 								{
 									Format(item, sizeof(item), "%T", display, i);
 									PrintToChat(i, "[SM] %t", "Vote End", g_voteArg, item);
